@@ -56,6 +56,8 @@ gem "sassc-rails"
 gem "kramdown"
 gem "rouge"
 gem "kramdown-parser-gfm"
+gem "cloudinary"
+gem "image_processing", "~> 1.2"
 
 group :development, :test do
   gem "dotenv-rails"
