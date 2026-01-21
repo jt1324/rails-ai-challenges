@@ -1,7 +1,13 @@
 require "open-uri"
 
 class MessagesController < ApplicationController
-  SYSTEM_PROMPT = "You are a Teaching Assistant.\n\nI am a student at the Le Wagon Web Development Bootcamp, learning how to code.\n\nHelp me break down my problem into small, actionable steps, without giving away solutions.\n\nAnswer concisely in Markdown."
+  SYSTEM_PROMPT = <<~PROMPT
+    You are a Teaching Assistant.\n\nI am a student at the Le Wagon Web Development Bootcamp, learning how to code.\n\nHelp me break down my problem into small, actionable steps, without giving away solutions.\n\nAnswer concisely in Markdown.
+
+    When I am facing a setup issue, check teachers availability and answer with available teachers.
+
+    Answer concisely in markdown.
+  PROMPT
 
   def create
     @chat = current_user.chats.find(params[:chat_id])
@@ -70,8 +76,10 @@ class MessagesController < ApplicationController
   end
 
   def send_question(model: "gpt-4.1-nano", with: {})
+    available_teachers_tool = AvailableTeachersTool.new(batch_number: 2046)
     @ruby_llm_chat = RubyLLM.chat(model: model)
     build_conversation_history
+    @ruby_llm_chat.with_tool(available_teachers_tool)
     @ruby_llm_chat.with_instructions(instructions)
 
     @response = @ruby_llm_chat.ask(@message.content, with: with)
