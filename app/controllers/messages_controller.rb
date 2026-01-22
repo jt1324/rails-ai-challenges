@@ -17,13 +17,18 @@ class MessagesController < ApplicationController
     @message.role = "user"
 
     if @message.save
+      @assistant_message = @chat.messages.create(role: "assistant", content: "")
       if @message.file.attached?
         process_file(@message.file) # send question w/ file to the appropriate model
       else
         send_question # send question to the model
       end
 
-      @chat.messages.create(role: "assistant", content: @response.content)
+      @assistant_message.update(content: @response.content)
+      broadcast_replace(@assistant_message)
+
+
+      # @chat.messages.create(role: "assistant", content: @response.content)
       @chat.generate_title_from_first_message
 
       respond_to do |format|
@@ -40,8 +45,13 @@ class MessagesController < ApplicationController
 
   private
 
+  def broadcast_replace(message)
+    Turbo::StreamsChannel.broadcast_replace_to(@chat, target: helpers.dom_id(message), partial: "messages/message", locals: { message: message })
+  end
+
   def build_conversation_history
     @chat.messages.each do |message|
+      next if message.content.blank?
       @ruby_llm_chat.add_message(message)
     end
   end
@@ -82,6 +92,12 @@ class MessagesController < ApplicationController
     @ruby_llm_chat.with_tool(available_teachers_tool)
     @ruby_llm_chat.with_instructions(instructions)
 
-    @response = @ruby_llm_chat.ask(@message.content, with: with)
+    @response = @ruby_llm_chat.ask(@message.content, with: with) do |chunk|
+      next if chunk.content.blank? # skip empty chunks
+
+      @assistant_message.content += chunk.content
+      broadcast_replace(@assistant_message)
+    end
+
   end
 end

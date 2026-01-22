@@ -58,6 +58,7 @@ gem "rouge"
 gem "kramdown-parser-gfm"
 gem "cloudinary"
 gem "image_processing", "~> 1.2"
+gem "solid_cable"
 
 group :development, :test do
   gem "dotenv-rails"

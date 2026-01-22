@@ -5,11 +5,17 @@ class Message < ApplicationRecord
   belongs_to :chat
   has_one_attached :file
 
+  after_create_commit :broadcast_append_to_chat
+
   validate :user_message_limit, if: -> { role == 'user' }
   validate :file_size_limit
   validates :content, length: { minimum: 10, maximum: 1000 }, if: -> { role == "user" }
 
   private
+
+  def broadcast_append_to_chat
+    broadcast_append_to chat, target: "messages", partial: "messages/message", locals: { message: self }
+  end
 
   def user_message_limit
     if chat.messages.where(role: 'user').count >= MAX_USER_MESSAGES
@@ -22,4 +28,7 @@ class Message < ApplicationRecord
       errors.add(:file, "size must be less than #{MAX_FILE_SIZE_MB}MB")
     end
   end
+
+
+
 end
